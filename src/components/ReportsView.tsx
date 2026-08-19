@@ -1314,7 +1314,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
                 <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
                   <span>កូដជំនាញ: <strong className="font-mono text-zinc-800 dark:text-zinc-200">{m.code || 'CPI-M'}</strong></span>
-                  <span>ចំនួនថ្នាក់ដែលបង្រៀន: <strong className="text-zinc-800 dark:text-zinc-200">{classes.filter(c => c.major === m.nameKhmer).length} ថ្នាក់</strong></span>
+                  <span>ចំនួនថ្នាក់ដែលបង្រៀន: <strong className="text-zinc-800 dark:text-zinc-200">{classes.filter(c => (c.major && c.major === m.nameKhmer) || students.some(s => s.classId === c.id && s.major === m.nameKhmer)).length} ថ្នាក់</strong></span>
                 </div>
               </div>
             ))}

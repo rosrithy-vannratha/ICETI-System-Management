@@ -81,6 +81,7 @@ export interface ClassRoom {
   teacherName: string;
   totalStudents: number;
   academicYear: string;
+  major?: string;
 }
 
 export interface Major {
