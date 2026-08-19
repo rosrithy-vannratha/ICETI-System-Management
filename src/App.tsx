@@ -196,9 +196,7 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    let unsubStudents: (() => void) | undefined;
-    let unsubTeachers: (() => void) | undefined;
-    let unsubClasses: (() => void) | undefined;
+    const unsubs: (() => void)[] = [];
 
     const initializeDataAndSubscriptions = async () => {
       try {
@@ -238,24 +236,54 @@ export default function App() {
         }
         setDatabaseError('');
 
-        // Subscribe to real-time updates from Firestore
-        unsubStudents = studentDatabase.subscribe((updatedStudents) => {
-          if (!cancelled && updatedStudents.length > 0) {
-            setStudents(updatedStudents);
-          }
-        });
-
-        unsubTeachers = teachersDatabase.subscribe((updatedTeachers) => {
-          if (!cancelled && updatedTeachers.length > 0) {
-            setTeachers(updatedTeachers);
-          }
-        });
-
-        unsubClasses = classesDatabase.subscribe((updatedClasses) => {
-          if (!cancelled && updatedClasses.length > 0) {
-            setClasses(updatedClasses);
-          }
-        });
+        // Subscribe to real-time updates from Firestore across all entities
+        unsubs.push(
+          studentDatabase.subscribe((updatedStudents) => {
+            if (!cancelled && updatedStudents.length > 0) {
+              setStudents(updatedStudents);
+            }
+          }),
+          teachersDatabase.subscribe((updatedTeachers) => {
+            if (!cancelled && updatedTeachers.length > 0) {
+              setTeachers(updatedTeachers);
+            }
+          }),
+          classesDatabase.subscribe((updatedClasses) => {
+            if (!cancelled && updatedClasses.length > 0) {
+              setClasses(updatedClasses);
+            }
+          }),
+          academicDatabase.subscribeResource<Major>('majors', (updatedMajors) => {
+            if (!cancelled && updatedMajors.length > 0) {
+              setMajors(updatedMajors);
+            }
+          }),
+          academicDatabase.subscribeResource<Generation>('generations', (updatedGenerations) => {
+            if (!cancelled && updatedGenerations.length > 0) {
+              setGenerations(updatedGenerations);
+            }
+          }),
+          academicDatabase.subscribeResource<AcademicYear>('academicYears', (updatedAcademicYears) => {
+            if (!cancelled && updatedAcademicYears.length > 0) {
+              setAcademicYears(updatedAcademicYears);
+            }
+          }),
+          academicDatabase.subscribeResource<YearLevel>('yearLevels', (updatedYearLevels) => {
+            if (!cancelled && updatedYearLevels.length > 0) {
+              setYearLevels(updatedYearLevels);
+            }
+          }),
+          academicDatabase.subscribeResource<Semester>('semesters', (updatedSemesters) => {
+            if (!cancelled && updatedSemesters.length > 0) {
+              setSemesters(updatedSemesters);
+            }
+          }),
+          attendanceDatabase.subscribe((updatedAttendances) => {
+            if (!cancelled && Object.keys(updatedAttendances).length > 0) {
+              setSavedAttendances(updatedAttendances);
+            }
+          })
+        );
       } catch (error) {
         if (!cancelled) {
           setDatabaseError(error instanceof Error ? error.message : 'មិនអាចទាញទិន្នន័យពី Database បានទេ។');
@@ -266,9 +294,7 @@ export default function App() {
     initializeDataAndSubscriptions();
     return () => {
       cancelled = true;
-      if (unsubStudents) unsubStudents();
-      if (unsubTeachers) unsubTeachers();
-      if (unsubClasses) unsubClasses();
+      unsubs.forEach((unsub) => unsub());
     };
   }, []);
 

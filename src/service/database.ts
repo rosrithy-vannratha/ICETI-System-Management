@@ -35,8 +35,7 @@ const KEYS = {
   SEMESTERS: 'smart_school_semesters',
   ATTENDANCE: 'smart_school_attendance',
   TEACHER_ATTENDANCE: 'smart_school_teacher_attendance',
-  BACKUPS: 'smart_school_backups',
-  SEEDED: 'smart_school_firestore_seeded'
+  BACKUPS: 'smart_school_backups'
 };
 
 // Safe LocalStorage Helpers
@@ -65,8 +64,8 @@ export async function seedInitialCloudDataIfEmpty(): Promise<boolean> {
   try {
     const existing = await firestoreDatabase.getAll<Student>('students');
     if (!existing || existing.length === 0) {
-      console.log('Seeding initial dynamic records into Firestore database...');
-      await Promise.allSettled([
+      console.log('Seeding initial dynamic records into Cloud Firestore database...');
+      await Promise.all([
         firestoreDatabase.batchSet('students', INITIAL_STUDENTS),
         firestoreDatabase.batchSet('teachers', INITIAL_TEACHERS),
         firestoreDatabase.batchSet('classes', INITIAL_CLASSES),
@@ -76,18 +75,17 @@ export async function seedInitialCloudDataIfEmpty(): Promise<boolean> {
         firestoreDatabase.batchSet('yearLevels', INITIAL_YEAR_LEVELS),
         firestoreDatabase.batchSet('semesters', INITIAL_SEMESTERS)
       ]);
-      localStorage.setItem(KEYS.SEEDED, 'true');
       return true;
     }
     return false;
   } catch (e) {
-    console.warn('Initial cloud database seed check:', e);
+    console.warn('Initial cloud database seed error:', e);
     return false;
   }
 }
 
 // -------------------------------------------------------------
-// 1. STUDENT DATABASE SERVICE (Firestore + Local Sync)
+// 1. STUDENT DATABASE SERVICE (Cloud Firestore Authoritative)
 // -------------------------------------------------------------
 export const studentDatabase = {
   subscribe: (onUpdate: (students: Student[]) => void): Unsubscribe => {
@@ -107,52 +105,53 @@ export const studentDatabase = {
         return cloudStudents;
       }
     } catch (e) {
-      console.warn('Firestore fetch students fallback to local cache:', e);
+      console.warn('Firestore fetch students error:', e);
     }
-    const stored = getStoredJson<Student[]>(KEYS.STUDENTS, []);
-    if (stored && stored.length > 0) {
-      return stored;
-    }
-    setStoredJson(KEYS.STUDENTS, INITIAL_STUDENTS);
-    return INITIAL_STUDENTS;
+    return getStoredJson<Student[]>(KEYS.STUDENTS, INITIAL_STUDENTS);
   },
 
   create: async (student: Student): Promise<Student> => {
-    const current = getStoredJson<Student[]>(KEYS.STUDENTS, INITIAL_STUDENTS);
+    const current = getStoredJson<Student[]>(KEYS.STUDENTS, []);
     const updated = [student, ...current.filter((s) => s.id !== student.id)];
     setStoredJson(KEYS.STUDENTS, updated);
 
-    // Sync to Firestore
-    firestoreDatabase.setItem('students', student).catch((e) => {
-      console.warn('Firestore create student background sync failed:', e);
-    });
+    // Save to Firestore
+    try {
+      await firestoreDatabase.setItem('students', student);
+    } catch (e) {
+      console.error('Firestore create student error:', e);
+    }
 
     return student;
   },
 
   update: async (student: Student): Promise<Student> => {
-    const current = getStoredJson<Student[]>(KEYS.STUDENTS, INITIAL_STUDENTS);
+    const current = getStoredJson<Student[]>(KEYS.STUDENTS, []);
     const updated = current.map((s) => (s.id === student.id ? student : s));
     setStoredJson(KEYS.STUDENTS, updated);
 
-    // Sync to Firestore
-    firestoreDatabase.setItem('students', student).catch((e) => {
-      console.warn('Firestore update student background sync failed:', e);
-    });
+    // Save to Firestore
+    try {
+      await firestoreDatabase.setItem('students', student);
+    } catch (e) {
+      console.error('Firestore update student error:', e);
+    }
 
     return student;
   },
 
   remove: async (ids: string[]): Promise<{ deleted: number }> => {
-    const current = getStoredJson<Student[]>(KEYS.STUDENTS, INITIAL_STUDENTS);
+    const current = getStoredJson<Student[]>(KEYS.STUDENTS, []);
     const idSet = new Set(ids);
     const updated = current.filter((s) => !idSet.has(s.id));
     setStoredJson(KEYS.STUDENTS, updated);
 
-    // Sync deletion to Firestore
-    firestoreDatabase.batchDelete('students', ids).catch((e) => {
-      console.warn('Firestore delete student background sync failed:', e);
-    });
+    // Delete in Firestore
+    try {
+      await firestoreDatabase.batchDelete('students', ids);
+    } catch (e) {
+      console.error('Firestore delete students error:', e);
+    }
 
     return { deleted: ids.length };
   },
@@ -163,24 +162,25 @@ export const studentDatabase = {
       result = students;
       setStoredJson(KEYS.STUDENTS, students);
     } else {
-      const current = getStoredJson<Student[]>(KEYS.STUDENTS, INITIAL_STUDENTS);
+      const current = getStoredJson<Student[]>(KEYS.STUDENTS, []);
       const existingIds = new Set(current.map((s) => s.id));
       const newItems = students.filter((s) => !existingIds.has(s.id));
       result = [...current, ...newItems];
       setStoredJson(KEYS.STUDENTS, result);
     }
 
-    // Sync batch to Firestore
-    firestoreDatabase.batchSet('students', students).catch((e) => {
-      console.warn('Firestore batch student sync failed:', e);
-    });
+    try {
+      await firestoreDatabase.batchSet('students', students);
+    } catch (e) {
+      console.error('Firestore batch import students error:', e);
+    }
 
     return result;
   }
 };
 
 // -------------------------------------------------------------
-// 2. TEACHERS DATABASE SERVICE (Firestore + Local Sync)
+// 2. TEACHERS DATABASE SERVICE (Cloud Firestore Authoritative)
 // -------------------------------------------------------------
 export const teachersDatabase = {
   subscribe: (onUpdate: (teachers: Teacher[]) => void): Unsubscribe => {
@@ -200,36 +200,40 @@ export const teachersDatabase = {
         return cloudTeachers;
       }
     } catch (e) {
-      console.warn('Firestore fetch teachers fallback to local cache:', e);
+      console.warn('Firestore fetch teachers error:', e);
     }
     return getStoredJson<Teacher[]>(KEYS.TEACHERS, INITIAL_TEACHERS);
   },
 
   save: async (teacher: Teacher): Promise<Teacher> => {
-    const current = getStoredJson<Teacher[]>(KEYS.TEACHERS, INITIAL_TEACHERS);
+    const current = getStoredJson<Teacher[]>(KEYS.TEACHERS, []);
     const updated = [...current.filter((t) => t.id !== teacher.id), teacher];
     setStoredJson(KEYS.TEACHERS, updated);
 
-    firestoreDatabase.setItem('teachers', teacher).catch((e) => {
-      console.warn('Firestore save teacher background sync failed:', e);
-    });
+    try {
+      await firestoreDatabase.setItem('teachers', teacher);
+    } catch (e) {
+      console.error('Firestore save teacher error:', e);
+    }
 
     return teacher;
   },
 
   remove: async (id: string): Promise<void> => {
-    const current = getStoredJson<Teacher[]>(KEYS.TEACHERS, INITIAL_TEACHERS);
+    const current = getStoredJson<Teacher[]>(KEYS.TEACHERS, []);
     const updated = current.filter((t) => t.id !== id);
     setStoredJson(KEYS.TEACHERS, updated);
 
-    firestoreDatabase.deleteItem('teachers', id).catch((e) => {
-      console.warn('Firestore delete teacher background sync failed:', e);
-    });
+    try {
+      await firestoreDatabase.deleteItem('teachers', id);
+    } catch (e) {
+      console.error('Firestore delete teacher error:', e);
+    }
   }
 };
 
 // -------------------------------------------------------------
-// 3. CLASSES DATABASE SERVICE (Firestore + Local Sync)
+// 3. CLASSES DATABASE SERVICE (Cloud Firestore Authoritative)
 // -------------------------------------------------------------
 export const classesDatabase = {
   subscribe: (onUpdate: (classes: ClassRoom[]) => void): Unsubscribe => {
@@ -249,36 +253,40 @@ export const classesDatabase = {
         return cloudClasses;
       }
     } catch (e) {
-      console.warn('Firestore fetch classes fallback to local cache:', e);
+      console.warn('Firestore fetch classes error:', e);
     }
     return getStoredJson<ClassRoom[]>(KEYS.CLASSES, INITIAL_CLASSES);
   },
 
   save: async (classItem: ClassRoom): Promise<ClassRoom> => {
-    const current = getStoredJson<ClassRoom[]>(KEYS.CLASSES, INITIAL_CLASSES);
+    const current = getStoredJson<ClassRoom[]>(KEYS.CLASSES, []);
     const updated = [...current.filter((c) => c.id !== classItem.id), classItem];
     setStoredJson(KEYS.CLASSES, updated);
 
-    firestoreDatabase.setItem('classes', classItem).catch((e) => {
-      console.warn('Firestore save class background sync failed:', e);
-    });
+    try {
+      await firestoreDatabase.setItem('classes', classItem);
+    } catch (e) {
+      console.error('Firestore save class error:', e);
+    }
 
     return classItem;
   },
 
   remove: async (id: string): Promise<void> => {
-    const current = getStoredJson<ClassRoom[]>(KEYS.CLASSES, INITIAL_CLASSES);
+    const current = getStoredJson<ClassRoom[]>(KEYS.CLASSES, []);
     const updated = current.filter((c) => c.id !== id);
     setStoredJson(KEYS.CLASSES, updated);
 
-    firestoreDatabase.deleteItem('classes', id).catch((e) => {
-      console.warn('Firestore delete class background sync failed:', e);
-    });
+    try {
+      await firestoreDatabase.deleteItem('classes', id);
+    } catch (e) {
+      console.error('Firestore delete class error:', e);
+    }
   }
 };
 
 // -------------------------------------------------------------
-// 4. ACADEMIC STRUCTURE DATABASE SERVICE (Firestore + Local Sync)
+// 4. ACADEMIC STRUCTURE DATABASE SERVICE (Cloud Firestore Authoritative)
 // -------------------------------------------------------------
 export type AcademicResource = 'generations' | 'academicYears' | 'yearLevels' | 'semesters' | 'majors';
 export type AcademicItem = Generation | AcademicYear | YearLevel | Semester | Major;
@@ -292,6 +300,25 @@ export interface AcademicStructureData {
 }
 
 export const academicDatabase = {
+  subscribeResource: <T extends AcademicItem>(
+    resource: AcademicResource,
+    onUpdate: (items: T[]) => void
+  ): Unsubscribe => {
+    return firestoreDatabase.subscribeCollection<T>(resource, (cloudItems) => {
+      if (cloudItems && cloudItems.length > 0) {
+        const keyMap: Record<AcademicResource, string> = {
+          generations: KEYS.GENERATIONS,
+          academicYears: KEYS.ACADEMIC_YEARS,
+          yearLevels: KEYS.YEAR_LEVELS,
+          semesters: KEYS.SEMESTERS,
+          majors: KEYS.MAJORS
+        };
+        setStoredJson(keyMap[resource], cloudItems);
+        onUpdate(cloudItems);
+      }
+    });
+  },
+
   list: async (): Promise<AcademicStructureData> => {
     try {
       const [gen, ay, yl, sem, maj] = await Promise.allSettled([
@@ -340,9 +367,11 @@ export const academicDatabase = {
     const updated = [...current.filter((x: any) => x.id !== (item as any).id), item];
     setStoredJson(targetKey, updated);
 
-    firestoreDatabase.setItem(resource, item).catch((e) => {
-      console.warn(`Firestore create ${resource} sync failed:`, e);
-    });
+    try {
+      await firestoreDatabase.setItem(resource, item);
+    } catch (e) {
+      console.error(`Firestore create ${resource} error:`, e);
+    }
 
     return item;
   },
@@ -361,9 +390,11 @@ export const academicDatabase = {
     const updated = current.map((x: any) => (x.id === (item as any).id ? item : x));
     setStoredJson(targetKey, updated);
 
-    firestoreDatabase.setItem(resource, item).catch((e) => {
-      console.warn(`Firestore update ${resource} sync failed:`, e);
-    });
+    try {
+      await firestoreDatabase.setItem(resource, item);
+    } catch (e) {
+      console.error(`Firestore update ${resource} error:`, e);
+    }
 
     return item;
   },
@@ -382,18 +413,35 @@ export const academicDatabase = {
     const updated = current.filter((x: any) => x.id !== id);
     setStoredJson(targetKey, updated);
 
-    firestoreDatabase.deleteItem(resource, id).catch((e) => {
-      console.warn(`Firestore delete ${resource} sync failed:`, e);
-    });
+    try {
+      await firestoreDatabase.deleteItem(resource, id);
+    } catch (e) {
+      console.error(`Firestore delete ${resource} error:`, e);
+    }
 
     return { deleted: 1 };
   }
 };
 
 // -------------------------------------------------------------
-// 5. ATTENDANCE DATABASE SERVICE (Firestore + Local Sync)
+// 5. ATTENDANCE DATABASE SERVICE (Cloud Firestore Authoritative)
 // -------------------------------------------------------------
 export const attendanceDatabase = {
+  subscribe: (onUpdate: (attendances: Record<string, Record<string, { status: AttendanceStatus; note?: string }>>) => void): Unsubscribe => {
+    return firestoreDatabase.subscribeCollection<{ id: string; records: Record<string, { status: AttendanceStatus; note?: string }> }>('attendances', (items) => {
+      if (items && items.length > 0) {
+        const result: Record<string, Record<string, { status: AttendanceStatus; note?: string }>> = {};
+        items.forEach((item) => {
+          if (item.id && item.records) {
+            result[item.id] = item.records;
+          }
+        });
+        setStoredJson(KEYS.ATTENDANCE, result);
+        onUpdate(result);
+      }
+    });
+  },
+
   saveRecord: async (
     classId: string,
     date: string,
@@ -407,9 +455,11 @@ export const attendanceDatabase = {
     all[key] = records;
     setStoredJson(KEYS.ATTENDANCE, all);
 
-    firestoreDatabase.saveAttendanceRecord(classId, date, records).catch((e) => {
-      console.warn('Firestore save attendance sync failed:', e);
-    });
+    try {
+      await firestoreDatabase.saveAttendanceRecord(classId, date, records);
+    } catch (e) {
+      console.error('Firestore save attendance error:', e);
+    }
   },
 
   getAll: async () => {
@@ -420,7 +470,7 @@ export const attendanceDatabase = {
         return cloud;
       }
     } catch (e) {
-      console.warn('Firestore fetch attendances fallback to local cache:', e);
+      console.warn('Firestore fetch attendances error:', e);
     }
     return getStoredJson<Record<string, Record<string, { status: AttendanceStatus; note?: string }>>>(
       KEYS.ATTENDANCE,
