@@ -9,12 +9,14 @@ import type {
   Teacher,
   YearLevel
 } from '../types';
+import schoolLogoImg from '../assets/images/icetilogo.jpg';
+import adminAvatarImg from '../assets/images/admin_avatar_1787026378402.jpg';
 
 export const APP_ASSETS = {
-  loginLogo: '/src/assets/images/icetilogo.jpg',
-  schoolLogo: '/src/assets/images/icetilogo.jpg',
-  adminAvatar: '/src/assets/images/admin_avatar_1787026378402.jpg',
-  userAvatar: '/src/assets/images/admin_avatar_1787026378402.jpg',
+  loginLogo: schoolLogoImg,
+  schoolLogo: schoolLogoImg,
+  adminAvatar: adminAvatarImg,
+  userAvatar: adminAvatarImg,
   teacherAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
 };
 
