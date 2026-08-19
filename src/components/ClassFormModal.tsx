@@ -171,9 +171,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                 <option value="ឆ្នាំទី ២">ឆ្នាំទី ២ (Year 2)</option>
                 <option value="ឆ្នាំទី ៣">ឆ្នាំទី ៣ (Year 3)</option>
                 <option value="ឆ្នាំទី ៤">ឆ្នាំទី ៤ (Year 4)</option>
-                <option value="ថ្នាក់ទី ១០">ថ្នាក់ទី ១០ (Grade 10)</option>
-                <option value="ថ្នាក់ទី ១១">ថ្នាក់ទី ១១ (Grade 11)</option>
-                <option value="ថ្នាក់ទី ១២">ថ្នាក់ទី ១២ (Grade 12)</option>
               </select>
             </div>
 
