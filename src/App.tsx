@@ -820,6 +820,7 @@ export default function App() {
                 <ClassesView
                   classes={classes}
                   students={students}
+                  majors={majors}
                   onSelectClassToRecord={(classId) => {
                     setCurrentTab('attendance');
                   }}

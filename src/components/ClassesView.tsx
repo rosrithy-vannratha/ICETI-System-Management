@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ClassRoom, Student } from '../types';
+import { ClassRoom, Student, Major } from '../types';
 import {
   BookOpen,
   Users,
@@ -14,7 +14,9 @@ import {
   GraduationCap,
   Calendar,
   Layers,
-  Sparkles
+  Sparkles,
+  Clock,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ClassFormModal } from './ClassFormModal';
@@ -22,6 +24,7 @@ import { ClassFormModal } from './ClassFormModal';
 interface ClassesViewProps {
   classes: ClassRoom[];
   students: Student[];
+  majors?: Major[];
   onSelectClassToRecord: (classId: string) => void;
   onAddClass?: (newClass: Omit<ClassRoom, 'id'>) => void;
   onUpdateClass?: (updatedClass: ClassRoom) => void;
@@ -31,6 +34,7 @@ interface ClassesViewProps {
 export const ClassesView: React.FC<ClassesViewProps> = ({
   classes,
   students,
+  majors = [],
   onSelectClassToRecord,
   onAddClass,
   onUpdateClass,
@@ -38,6 +42,7 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('all');
+  const [selectedShift, setSelectedShift] = useState('all');
 
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -51,13 +56,32 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
         cls.nameKhmer.toLowerCase().includes(q) ||
         cls.teacherName.toLowerCase().includes(q) ||
         cls.roomNumber.toLowerCase().includes(q) ||
-        cls.grade.toLowerCase().includes(q);
+        cls.grade.toLowerCase().includes(q) ||
+        (cls.major && cls.major.toLowerCase().includes(q)) ||
+        (cls.shift && cls.shift.toLowerCase().includes(q));
 
       const matchGrade = selectedGrade === 'all' || cls.grade === selectedGrade;
 
-      return matchSearch && matchGrade;
+      let matchShift = true;
+      if (selectedShift !== 'all') {
+        const normSelected = selectedShift.toLowerCase();
+        const normShift = (cls.shift || '').toLowerCase();
+        if (normSelected.includes('ព្រឹក')) {
+          matchShift = normShift.includes('ព្រឹក') || normShift.includes('morning');
+        } else if (normSelected.includes('រសៀល')) {
+          matchShift = normShift.includes('រសៀល') || normShift.includes('afternoon');
+        } else if (normSelected.includes('យប់')) {
+          matchShift = normShift.includes('យប់') || normShift.includes('evening') || normShift.includes('night');
+        } else if (normSelected.includes('ចុងសប្តាហ៍')) {
+          matchShift = normShift.includes('ចុងសប្តាហ៍') || normShift.includes('weekend');
+        } else {
+          matchShift = normShift.includes(normSelected);
+        }
+      }
+
+      return matchSearch && matchGrade && matchShift;
     });
-  }, [classes, searchTerm, selectedGrade]);
+  }, [classes, searchTerm, selectedGrade, selectedShift]);
 
   const handleOpenAdd = () => {
     setEditingClass(null);
@@ -99,7 +123,7 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
             គ្រប់គ្រងថ្នាក់រៀន
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            បង្កើត កែប្រែ និងលុបថ្នាក់រៀន ព្រមទាំងគ្រប់គ្រងព័ត៌មានគ្រូបន្ទុកថ្នាក់
+            បង្កើត កែប្រែ និងលុបថ្នាក់រៀន ព្រមទាំងគ្រប់គ្រងវេនសិក្សា និងគ្រូបន្ទុកថ្នាក់
           </p>
         </div>
 
@@ -122,29 +146,43 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
       </div>
 
       {/* Filter / Search Bar */}
-      <div className="bg-white dark:bg-[#121215] p-4 sm:p-5 rounded-3xl shadow-xs border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-[#121215] p-4 sm:p-5 rounded-3xl shadow-xs border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="ស្វែងរកតាមឈ្មោះថ្នាក់រៀន, គ្រូបន្ទុក, លេខបន្ទប់..."
+            placeholder="ស្វែងរកតាមឈ្មោះថ្នាក់រៀន, គ្រូបន្ទុក, លេខបន្ទប់, វេនសិក្សា..."
             className="w-full pl-10 pr-4 py-2.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder-zinc-400 transition-all"
           />
         </div>
 
-        <div className="w-full sm:w-64">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2.5">
+          {/* Grade filter */}
           <select
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
-            className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white font-medium focus:border-indigo-500 outline-none cursor-pointer transition-all"
+            className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white font-medium focus:border-indigo-500 outline-none cursor-pointer transition-all min-w-[160px]"
           >
-            <option value="all">គ្រប់កម្រិតថ្នាក់/ឆ្នាំ (All Grades)</option>
+            <option value="all">គ្រប់កម្រិតថ្នាក់ (All Grades)</option>
             <option value="ឆ្នាំទី ១">ឆ្នាំទី ១ (Year 1)</option>
             <option value="ឆ្នាំទី ២">ឆ្នាំទី ២ (Year 2)</option>
             <option value="ឆ្នាំទី ៣">ឆ្នាំទី ៣ (Year 3)</option>
             <option value="ឆ្នាំទី ៤">ឆ្នាំទី ៤ (Year 4)</option>
+          </select>
+
+          {/* Shift filter */}
+          <select
+            value={selectedShift}
+            onChange={(e) => setSelectedShift(e.target.value)}
+            className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white font-medium focus:border-indigo-500 outline-none cursor-pointer transition-all min-w-[160px]"
+          >
+            <option value="all">គ្រប់វេនសិក្សា (All Shifts)</option>
+            <option value="ព្រឹក (Morning)">វេនព្រឹក (Morning)</option>
+            <option value="រសៀល (Afternoon)">វេនរសៀល (Afternoon)</option>
+            <option value="យប់ (Evening)">វេនយប់ (Evening)</option>
+            <option value="ចុងសប្តាហ៍ (Weekend)">ចុងសប្តាហ៍ (Weekend)</option>
           </select>
         </div>
       </div>
@@ -174,8 +212,6 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
             const enrolledCount = students.filter(
               (s) => s.classId === cls.id || s.className === cls.nameKhmer
             ).length;
-            const rates = [96, 92, 95, 94, 91, 98];
-            const todayRate = rates[idx % rates.length];
 
             return (
               <motion.div
@@ -184,18 +220,29 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
                 className="bg-white dark:bg-[#121215] rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between transition-all"
               >
                 <div>
-                  {/* Top Bar: Icon, Attendance Rate & Action Menu */}
+                  {/* Top Bar: Icon, Badges & Action Menu */}
                   <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-3 bg-zinc-100 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-zinc-200 dark:border-zinc-700">
-                        <BookOpen className="w-5 h-5" />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="p-2.5 bg-zinc-100 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+                        <BookOpen className="w-4 h-4" />
                       </div>
-                      <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-[11px] font-bold">
+                      <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 rounded-xl text-[10px] font-bold">
                         {cls.grade}
                       </span>
+                      {cls.shift && (
+                        <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded-xl text-[10px] font-semibold flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-500" />
+                          <span>{cls.shift.replace(/\s*\(.*?\)/, '')}</span>
+                        </span>
+                      )}
+                      {cls.major && (
+                        <span className="px-2 py-0.5 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 rounded-xl text-[10px] font-medium truncate max-w-[120px]">
+                          {cls.major}
+                        </span>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       {/* Edit Button */}
                       {onUpdateClass && (
                         <button
@@ -242,6 +289,16 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
 
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-zinc-400" />
+                        <span>វេនសិក្សា</span>
+                      </span>
+                      <span className="font-bold text-amber-600 dark:text-amber-400">
+                        {cls.shift || 'ព្រឹក (Morning)'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-zinc-400" />
                         <span>ចំនួនសិស្សជាក់ស្តែង</span>
                       </span>
@@ -278,60 +335,59 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
         )}
       </div>
 
-      {/* Modal: Create / Edit Class */}
+      {/* Class Form Modal */}
       <ClassFormModal
         isOpen={isFormModalOpen}
-        onClose={() => {
-          setIsFormModalOpen(false);
-          setEditingClass(null);
-        }}
+        onClose={() => setIsFormModalOpen(false)}
         onSaveClass={handleSaveClass}
         initialData={editingClass}
+        majors={majors}
       />
 
-      {/* Confirmation Dialog: Delete Class */}
+      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {classToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-[#18181b] rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-rose-200 dark:border-rose-900"
+              className="bg-white dark:bg-[#121215] rounded-3xl p-6 max-w-md w-full shadow-2xl border border-zinc-200 dark:border-zinc-800"
             >
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-6 h-6" />
+              <div className="flex items-center gap-3 text-rose-500 mb-4">
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/50 rounded-2xl border border-rose-100 dark:border-rose-900/50">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                    បញ្ជាក់ការលុបថ្នាក់រៀន
+                  </h3>
+                  <p className="text-xs text-zinc-400">ប្រតិបត្តិការនេះមិនអាចត្រឡប់វិញបានទេ</p>
+                </div>
               </div>
-              <h3 className="text-lg font-extrabold text-zinc-900 dark:text-white mb-2">
-                លុបថ្នាក់រៀន?
-              </h3>
-              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-4 leading-relaxed">
-                តើអ្នកប្រាកដជាចង់លុបថ្នាក់ <strong className="text-zinc-900 dark:text-white">«{classToDelete.nameKhmer}»</strong> ចេញពីប្រព័ន្ធមែនទេ?
+
+              <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-6">
+                តើអ្នកពិតជាចង់លុបថ្នាក់រៀន{' '}
+                <strong className="text-zinc-900 dark:text-white">
+                  "{classToDelete.nameKhmer}"
+                </strong>{' '}
+                មែនទេ?
               </p>
 
-              {students.some((s) => s.classId === classToDelete.id || s.className === classToDelete.nameKhmer) && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl text-xs mb-5 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>
-                    ចំណាំ៖ មានសិស្សចំនួន <strong>{students.filter((s) => s.classId === classToDelete.id || s.className === classToDelete.nameKhmer).length} នាក់</strong> កំពុងស្ថិតក្នុងថ្នាក់នេះ។
-                  </span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2.5">
+              <div className="flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setClassToDelete(null)}
-                  className="px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2.5 text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-2xl transition-all cursor-pointer"
                 >
                   បោះបង់
                 </button>
                 <button
                   type="button"
                   onClick={handleConfirmDelete}
-                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:shadow-rose-500/25 cursor-pointer active:scale-95"
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-lg hover:shadow-rose-500/25 transition-all cursor-pointer active:scale-95"
                 >
-                  បាទ/ចាស លុបថ្នាក់នេះ
+                  យល់ព្រមលុប
                 </button>
               </div>
             </motion.div>

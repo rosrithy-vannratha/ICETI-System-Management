@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ClassRoom } from '../types';
-import { X, BookOpen, User, DoorOpen, Calendar, Layers, Check } from 'lucide-react';
+import { ClassRoom, Major } from '../types';
+import { X, BookOpen, User, DoorOpen, Calendar, Layers, Clock, Award, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface ClassFormModalProps {
@@ -8,18 +8,24 @@ interface ClassFormModalProps {
   onClose: () => void;
   onSaveClass: (classData: Omit<ClassRoom, 'id'>, editId?: string) => void;
   initialData?: ClassRoom | null;
+  majors?: Major[];
 }
 
 export const ClassFormModal: React.FC<ClassFormModalProps> = ({
   isOpen,
   onClose,
   onSaveClass,
-  initialData
+  initialData,
+  majors = []
 }) => {
   const isEditing = Boolean(initialData);
 
   const [nameKhmer, setNameKhmer] = useState('');
   const [grade, setGrade] = useState('ឆ្នាំទី ១');
+  const [shift, setShift] = useState('ព្រឹក (Morning)');
+  const [major, setMajor] = useState('គរុកោសល្យភាសាចិន');
+  const [generation, setGeneration] = useState('ជំនាន់ទី ៤');
+  const [semester, setSemester] = useState('ឆមាសទី ១');
   const [roomNumber, setRoomNumber] = useState('');
   const [teacherName, setTeacherName] = useState('');
   const [academicYear, setAcademicYear] = useState('2026-2027');
@@ -30,6 +36,10 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
     if (initialData) {
       setNameKhmer(initialData.nameKhmer || '');
       setGrade(initialData.grade || 'ឆ្នាំទី ១');
+      setShift(initialData.shift || 'ព្រឹក (Morning)');
+      setMajor(initialData.major || (majors.length > 0 ? majors[0].nameKhmer : 'គរុកោសល្យភាសាចិន'));
+      setGeneration(initialData.generation || 'ជំនាន់ទី ៤');
+      setSemester(initialData.semester || 'ឆមាសទី ១');
       setRoomNumber(initialData.roomNumber || '');
       setTeacherName(initialData.teacherName || '');
       setAcademicYear(initialData.academicYear || '2026-2027');
@@ -37,13 +47,17 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
     } else {
       setNameKhmer('');
       setGrade('ឆ្នាំទី ១');
+      setShift('ព្រឹក (Morning)');
+      setMajor(majors.length > 0 ? majors[0].nameKhmer : 'គរុកោសល្យភាសាចិន');
+      setGeneration('ជំនាន់ទី ៤');
+      setSemester('ឆមាសទី ១');
       setRoomNumber('ICETI-101');
       setTeacherName('');
       setAcademicYear('2026-2027');
       setTotalStudents(30);
     }
     setErrors({});
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, majors]);
 
   if (!isOpen) return null;
 
@@ -70,6 +84,10 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
       {
         nameKhmer: nameKhmer.trim(),
         grade,
+        shift,
+        major,
+        generation,
+        semester,
         roomNumber: roomNumber.trim(),
         teacherName: teacherName.trim(),
         totalStudents: Number(totalStudents) || 0,
@@ -82,12 +100,12 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="bg-white dark:bg-[#121215] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+        className="bg-white dark:bg-[#121215] rounded-3xl p-6 sm:p-7 max-w-xl w-full shadow-2xl border border-zinc-200 dark:border-zinc-800 my-8 overflow-hidden"
       >
         <div className="flex justify-between items-center pb-4 border-b border-zinc-100 dark:border-zinc-800 mb-5">
           <div className="flex items-center gap-3">
@@ -99,7 +117,7 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                 {isEditing ? 'EDIT CLASSROOM' : 'NEW CLASSROOM'}
               </span>
               <h3 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white">
-                {isEditing ? 'កែប្រែព័ត៌មានថ្នាក់រៀន' : 'បង្កើតថ្នាក់រៀនថ្មី'}
+                {isEditing ? 'កែប្រែព័ត៌មានថ្នាក់រៀន' : 'បង្កើតថ្នាក់រៀនថ្មី (New Classroom)'}
               </h3>
             </div>
           </div>
@@ -112,7 +130,7 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
           {/* Class Name */}
           <div>
             <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
@@ -137,11 +155,12 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
             )}
           </div>
 
-          {/* Grade Level & Room */}
+          {/* Grade Level & Shift (វេនសិក្សា) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                កម្រិតថ្នាក់ / ឆ្នាំ <span className="text-rose-500">*</span>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                <span>កម្រិតថ្នាក់ / ឆ្នាំ</span> <span className="text-rose-500">*</span>
               </label>
               <select
                 value={grade}
@@ -159,8 +178,100 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                លេខបន្ទប់សិក្សា <span className="text-rose-500">*</span>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-500" />
+                <span>វេនសិក្សា (Study Shift)</span> <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={shift}
+                onChange={(e) => setShift(e.target.value)}
+                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white font-medium focus:border-indigo-500 outline-none cursor-pointer transition-all"
+              >
+                <option value="ព្រឹក (Morning)">ព្រឹក (Morning)</option>
+                <option value="រសៀល (Afternoon)">រសៀល (Afternoon)</option>
+                <option value="យប់ (Evening)">យប់ (Evening)</option>
+                <option value="ចុងសប្តាហ៍ (Weekend)">ចុងសប្តាហ៍ (Weekend)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Major & Generation */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-purple-500" />
+                <span>ជំនាញ (Major)</span>
+              </label>
+              <select
+                value={major}
+                onChange={(e) => setMajor(e.target.value)}
+                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white font-medium focus:border-indigo-500 outline-none cursor-pointer transition-all"
+              >
+                {majors.length > 0 ? (
+                  majors.map((m) => (
+                    <option key={m.id} value={m.nameKhmer}>
+                      {m.nameKhmer}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="គរុកោសល្យភាសាចិន">គរុកោសល្យភាសាចិន</option>
+                    <option value="ភាសាចិនពាណិជ្ជកម្ម">ភាសាចិនពាណិជ្ជកម្ម</option>
+                    <option value="បកប្រែភាសាចិន">បកប្រែភាសាចិន</option>
+                    <option value="ភាសាចិនទូទៅ">ភាសាចិនទូទៅ</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                <span>ជំនាន់ (Generation)</span>
+              </label>
+              <select
+                value={generation}
+                onChange={(e) => setGeneration(e.target.value)}
+                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white font-medium focus:border-indigo-500 outline-none cursor-pointer transition-all"
+              >
+                <option value="ជំនាន់ទី ៤">ជំនាន់ទី ៤</option>
+                <option value="ជំនាន់ទី ៣">ជំនាន់ទី ៣</option>
+                <option value="ជំនាន់ទី ២">ជំនាន់ទី ២</option>
+                <option value="ជំនាន់ទី ១">ជំនាន់ទី ១</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Teacher Name & Room Number */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-emerald-500" />
+                <span>គ្រូបន្ទុកថ្នាក់</span> <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={teacherName}
+                onChange={(e) => {
+                  setTeacherName(e.target.value);
+                  if (errors.teacherName) setErrors((prev) => ({ ...prev, teacherName: '' }));
+                }}
+                placeholder="ឧ. សាស្ត្រាចារ្យ សុខ វិបុល"
+                className={`w-full bg-zinc-100 dark:bg-zinc-900 border rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
+                  errors.teacherName
+                    ? 'border-rose-500 focus:border-rose-500'
+                    : 'border-zinc-200 dark:border-zinc-700 focus:border-indigo-500'
+                }`}
+              />
+              {errors.teacherName && (
+                <p className="text-rose-500 text-[11px] mt-1 font-medium">{errors.teacherName}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                <DoorOpen className="w-3.5 h-3.5 text-teal-500" />
+                <span>លេខបន្ទប់សិក្សា</span> <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -169,7 +280,7 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                   setRoomNumber(e.target.value);
                   if (errors.roomNumber) setErrors((prev) => ({ ...prev, roomNumber: '' }));
                 }}
-                placeholder="ឧទាហរណ៍៖ ICETI-201"
+                placeholder="ឧ. ICETI-201"
                 className={`w-full bg-zinc-100 dark:bg-zinc-900 border rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
                   errors.roomNumber
                     ? 'border-rose-500 focus:border-rose-500'
@@ -180,30 +291,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                 <p className="text-rose-500 text-[11px] mt-1 font-medium">{errors.roomNumber}</p>
               )}
             </div>
-          </div>
-
-          {/* Teacher Name */}
-          <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-              គ្រូបន្ទុកថ្នាក់ / សាស្ត្រាចារ្យ <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={teacherName}
-              onChange={(e) => {
-                setTeacherName(e.target.value);
-                if (errors.teacherName) setErrors((prev) => ({ ...prev, teacherName: '' }));
-              }}
-              placeholder="ឧទាហរណ៍៖ សាស្ត្រាចារ្យ សុខ វិបុល"
-              className={`w-full bg-zinc-100 dark:bg-zinc-900 border rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
-                errors.teacherName
-                  ? 'border-rose-500 focus:border-rose-500'
-                  : 'border-zinc-200 dark:border-zinc-700 focus:border-indigo-500'
-              }`}
-            />
-            {errors.teacherName && (
-              <p className="text-rose-500 text-[11px] mt-1 font-medium">{errors.teacherName}</p>
-            )}
           </div>
 
           {/* Academic Year & Capacity */}

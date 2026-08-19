@@ -82,6 +82,9 @@ export interface ClassRoom {
   totalStudents: number;
   academicYear: string;
   major?: string;
+  shift?: string;
+  generation?: string;
+  semester?: string;
 }
 
 export interface Major {
