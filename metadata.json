@@ -1,0 +1,8 @@
+{
+  "name": "វិ.គរុកោសល្យភាសាចិន",
+  "description": "ប្រព័ន្ធគ្រប់គ្រងនិស្សិត គ្រូបង្រៀន កត់ត្រាវត្តមាន និងរបាយការណ៍ស្ថិតិ វិទ្យាស្ថានគរុកោសល្យភាសាចិន (Chinese Pedagogy Institute Student, Teacher & Attendance Management)",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #4f46e5;
+    --primary-container: #4338ca;
+    --primary-fixed: #e0e7ff;
+    --secondary: #0d9488;
+    --secondary-container: #ccfbf1;
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --surface-lowest: #ffffff;
+    --surface-low: #f1f5f9;
+    --surface-container: #e2e8f0;
+    --on-surface: #0f172a;
+    --on-surface-variant: #64748b;
+    --outline: #94a3b8;
+    --outline-variant: #e2e8f0;
+    --error: #e11d48;
+    --error-container: #ffe4e6;
+  }
+
+  .dark {
+    --primary: #818cf8;
+    --primary-container: #4f46e5;
+    --primary-fixed: #1e1b4b;
+    --secondary: #2dd4bf;
+    --secondary-container: #042f2e;
+    --background: #09090b;
+    --surface: #121215;
+    --surface-lowest: #18181b;
+    --surface-low: #27272a;
+    --surface-container: #27272a;
+    --on-surface: #f4f4f5;
+    --on-surface-variant: #a1a1aa;
+    --outline: #52525b;
+    --outline-variant: #27272a;
+    --error: #fb7185;
+    --error-container: #4c0519;
+  }
+
+  body {
+    font-family: 'Kantumruy Pro', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.icon-fill {
+  font-variation-settings: 'FILL' 1;
+}
+
+/* Bento tile glow effects */
+.bento-glow {
+  background: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 60%);
+}
+
+.dark .bento-glow {
+  background: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 65%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
+
+@media print {
+  nav, header, .no-print {
+    display: none !important;
+  }
+  main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+}
+
