@@ -49,6 +49,7 @@ import { AcademicStructureView } from './components/AcademicStructureView';
 import { motion, AnimatePresence } from 'motion/react';
 import { academicDatabase, createSystemBackup, studentDatabase } from './service/database';
 import { initAuth } from './service/googleAuth';
+import { generateId } from './utils/idGenerator';
 import type { SchoolDatabasePayload } from './service/googleDriveDatabase';
 
 export default function App() {
@@ -425,7 +426,7 @@ export default function App() {
   };
 
   const handleAddGeneration = async (data: Omit<Generation, 'id'>) => {
-    const created = await academicDatabase.create('generations', { ...data, id: `gen-${crypto.randomUUID()}` });
+    const created = await academicDatabase.create('generations', { ...data, id: generateId('gen') });
     setGenerations((current) => [...current, created]);
   };
 
@@ -440,7 +441,7 @@ export default function App() {
   };
 
   const handleAddAcademicYear = async (data: Omit<AcademicYear, 'id'>) => {
-    const created = await academicDatabase.create('academicYears', { ...data, id: `ay-${crypto.randomUUID()}` });
+    const created = await academicDatabase.create('academicYears', { ...data, id: generateId('ay') });
     setAcademicYears((current) => [...current, created]);
   };
 
@@ -455,7 +456,7 @@ export default function App() {
   };
 
   const handleAddYearLevel = async (data: Omit<YearLevel, 'id'>) => {
-    const created = await academicDatabase.create('yearLevels', { ...data, id: `yl-${crypto.randomUUID()}` });
+    const created = await academicDatabase.create('yearLevels', { ...data, id: generateId('yl') });
     setYearLevels((current) => [...current, created]);
   };
 
@@ -470,7 +471,7 @@ export default function App() {
   };
 
   const handleAddSemester = async (data: Omit<Semester, 'id'>) => {
-    const created = await academicDatabase.create('semesters', { ...data, id: `sem-${crypto.randomUUID()}` });
+    const created = await academicDatabase.create('semesters', { ...data, id: generateId('sem') });
     setSemesters((current) => [...current, created]);
   };
 
@@ -544,7 +545,7 @@ export default function App() {
   const handleAddStudent = async (newStudentData: Omit<Student, 'id'>) => {
     const newStudent: Student = {
       ...newStudentData,
-      id: `s-${crypto.randomUUID()}`
+      id: generateId('s')
     };
     const createdStudent = await studentDatabase.create(newStudent);
     setStudents((prev) => [createdStudent, ...prev]);
@@ -600,7 +601,7 @@ export default function App() {
     const existingByCode = new Map<string, Student>(students.map((student) => [student.studentCode.trim().toLowerCase(), student]));
     const values = importedStudents.map((student) => ({
       ...student,
-      id: existingByCode.get(student.studentCode.trim().toLowerCase())?.id || `s-${crypto.randomUUID()}`
+      id: existingByCode.get(student.studentCode.trim().toLowerCase())?.id || generateId('s')
     }));
     const savedStudents = await studentDatabase.import(values, mode);
     setStudents(savedStudents);
