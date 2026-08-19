@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Student record in the institute",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentCode": { "type": "string", "maxLength": 64 },
+        "fullNameKhmer": { "type": "string", "maxLength": 128 },
+        "fullNameEn": { "type": "string", "maxLength": 128 },
+        "chineseName": { "type": "string", "maxLength": 128 },
+        "gender": { "type": "string", "enum": ["M", "F"] },
+        "dob": { "type": "string", "maxLength": 64 },
+        "major": { "type": "string", "maxLength": 128 },
+        "generation": { "type": "string", "maxLength": 128 },
+        "yearLevel": { "type": "string", "maxLength": 128 },
+        "semester": { "type": "string", "maxLength": 128 },
+        "shift": { "type": "string", "maxLength": 64 },
+        "classId": { "type": "string", "maxLength": 128 },
+        "className": { "type": "string", "maxLength": 128 },
+        "avatarUrl": { "type": "string", "maxLength": 1024 },
+        "initialKhmer": { "type": "string", "maxLength": 32 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "parentName": { "type": "string", "maxLength": 128 },
+        "parentPhone": { "type": "string", "maxLength": 64 },
+        "address": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["id", "studentCode", "fullNameKhmer", "gender"]
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "Teacher profile in the institute",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "teacherCode": { "type": "string", "maxLength": 64 },
+        "fullNameKhmer": { "type": "string", "maxLength": 128 },
+        "fullNameEn": { "type": "string", "maxLength": 128 },
+        "chineseName": { "type": "string", "maxLength": 128 },
+        "gender": { "type": "string", "enum": ["M", "F"] },
+        "phone": { "type": "string", "maxLength": 64 },
+        "email": { "type": "string", "maxLength": 128 },
+        "degreeKhmer": { "type": "string", "maxLength": 128 },
+        "specialization": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["active", "leave", "inactive"] },
+        "avatarUrl": { "type": "string", "maxLength": 1024 }
+      },
+      "required": ["id", "teacherCode", "fullNameKhmer", "gender", "degreeKhmer"]
+    },
+    "ClassRoom": {
+      "title": "ClassRoom",
+      "description": "Classroom or course division",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nameKhmer": { "type": "string", "maxLength": 128 },
+        "grade": { "type": "string", "maxLength": 64 },
+        "roomNumber": { "type": "string", "maxLength": 64 },
+        "teacherName": { "type": "string", "maxLength": 128 },
+        "totalStudents": { "type": "number" },
+        "academicYear": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "nameKhmer", "grade", "roomNumber"]
+    },
+    "Major": {
+      "title": "Major",
+      "description": "Academic major or specialization",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 64 },
+        "nameKhmer": { "type": "string", "maxLength": 128 },
+        "nameChinese": { "type": "string", "maxLength": 128 },
+        "nameEn": { "type": "string", "maxLength": 128 },
+        "degreeLevel": { "type": "string", "maxLength": 128 },
+        "durationYears": { "type": "number" }
+      },
+      "required": ["id", "code", "nameKhmer"]
+    },
+    "Generation": {
+      "title": "Generation",
+      "description": "Cohort generation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nameKhmer": { "type": "string", "maxLength": 128 },
+        "startYear": { "type": "string", "maxLength": 64 },
+        "endYear": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["active", "graduated", "upcoming"] }
+      },
+      "required": ["id", "nameKhmer", "status"]
+    },
+    "AcademicYear": {
+      "title": "AcademicYear",
+      "description": "Academic year cycle",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nameKhmer": { "type": "string", "maxLength": 128 },
+        "startDate": { "type": "string", "maxLength": 64 },
+        "endDate": { "type": "string", "maxLength": 64 },
+        "isCurrent": { "type": "boolean" }
+      },
+      "required": ["id", "nameKhmer"]
+    },
+    "YearLevel": {
+      "title": "YearLevel",
+      "description": "Year of study level",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nameKhmer": { "type": "string", "maxLength": 128 },
+        "levelNumber": { "type": "number" }
+      },
+      "required": ["id", "nameKhmer", "levelNumber"]
+    },
+    "Semester": {
+      "title": "Semester",
+      "description": "Semester term",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nameKhmer": { "type": "string", "maxLength": 128 },
+        "semesterNumber": { "type": "number" },
+        "academicYearId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "nameKhmer", "semesterNumber"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Attendance log for a class on a specific date",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "classId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 64 },
+        "records": { "type": "object" },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "classId", "date"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of student profiles"
+    },
+    "/teachers/{teacherId}": {
+      "schema": "Teacher",
+      "description": "Collection of teachers"
+    },
+    "/classes/{classId}": {
+      "schema": "ClassRoom",
+      "description": "Collection of academic classes"
+    },
+    "/majors/{majorId}": {
+      "schema": "Major",
+      "description": "Academic majors"
+    },
+    "/generations/{generationId}": {
+      "schema": "Generation",
+      "description": "Student generations / cohorts"
+    },
+    "/academicYears/{academicYearId}": {
+      "schema": "AcademicYear",
+      "description": "Academic years"
+    },
+    "/yearLevels/{yearLevelId}": {
+      "schema": "YearLevel",
+      "description": "Study year levels"
+    },
+    "/semesters/{semesterId}": {
+      "schema": "Semester",
+      "description": "Academic semesters"
+    },
+    "/attendances/{attendanceId}": {
+      "schema": "AttendanceRecord",
+      "description": "Daily attendance records per class"
+    }
+  }
+}

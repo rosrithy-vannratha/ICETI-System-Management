@@ -3,6 +3,7 @@
   "appId": "1:987714408150:web:d0f55f7a059262f05dc377",
   "apiKey": "AIzaSyC6U3lLt4ExIctqlW1UzK2SRZVwXwYHylY",
   "authDomain": "upbeat-arch-7f6jr.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-c6bfdc81-c5ff-4d5d-87a7-ee242c9681d4",
   "storageBucket": "upbeat-arch-7f6jr.firebasestorage.app",
   "messagingSenderId": "987714408150",
   "measurementId": "",

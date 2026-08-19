@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Helper Primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    function isValidString(str, minLen, maxLen) {
+      return str is string && str.size() >= minLen && str.size() <= maxLen;
+    }
+
+    // Validation Helpers
+    function isValidStudent(data) {
+      return data.id is string && isValidId(data.id)
+        && isValidString(data.studentCode, 1, 64)
+        && isValidString(data.fullNameKhmer, 1, 128)
+        && (data.gender == 'M' || data.gender == 'F')
+        && (!('fullNameEn' in data) || data.fullNameEn is string && data.fullNameEn.size() <= 128)
+        && (!('chineseName' in data) || data.chineseName is string && data.chineseName.size() <= 128)
+        && (!('major' in data) || data.major is string && data.major.size() <= 128)
+        && (!('className' in data) || data.className is string && data.className.size() <= 128)
+        && (!('phone' in data) || data.phone is string && data.phone.size() <= 64);
+    }
+
+    function isValidTeacher(data) {
+      return data.id is string && isValidId(data.id)
+        && isValidString(data.teacherCode, 1, 64)
+        && isValidString(data.fullNameKhmer, 1, 128)
+        && (data.gender == 'M' || data.gender == 'F')
+        && isValidString(data.degreeKhmer, 1, 128)
+        && (data.status == 'active' || data.status == 'leave' || data.status == 'inactive')
+        && (!('phone' in data) || data.phone is string && data.phone.size() <= 64)
+        && (!('specialization' in data) || data.specialization is string && data.specialization.size() <= 128);
+    }
+
+    function isValidClassRoom(data) {
+      return data.id is string && isValidId(data.id)
+        && isValidString(data.nameKhmer, 1, 128)
+        && isValidString(data.grade, 1, 64)
+        && isValidString(data.roomNumber, 1, 64)
+        && (!('teacherName' in data) || data.teacherName is string && data.teacherName.size() <= 128)
+        && (!('totalStudents' in data) || (data.totalStudents is number && data.totalStudents >= 0));
+    }
+
+    function isValidAcademicItem(data) {
+      return data.id is string && isValidId(data.id)
+        && isValidString(data.nameKhmer, 1, 128);
+    }
+
+    function isValidAttendance(data) {
+      return data.id is string && isValidId(data.id)
+        && isValidString(data.classId, 1, 128)
+        && isValidString(data.date, 1, 64);
+    }
+
+    // Default safety catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Test connection doc
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // Students Collection
+    match /students/{studentId} {
+      allow read: if true;
+      allow create, update: if isValidId(studentId) && isValidStudent(incoming());
+      allow delete: if isValidId(studentId);
+    }
+
+    // Teachers Collection
+    match /teachers/{teacherId} {
+      allow read: if true;
+      allow create, update: if isValidId(teacherId) && isValidTeacher(incoming());
+      allow delete: if isValidId(teacherId);
+    }
+
+    // Classes Collection
+    match /classes/{classId} {
+      allow read: if true;
+      allow create, update: if isValidId(classId) && isValidClassRoom(incoming());
+      allow delete: if isValidId(classId);
+    }
+
+    // Academic Structure: Majors, Generations, AcademicYears, YearLevels, Semesters
+    match /majors/{majorId} {
+      allow read: if true;
+      allow create, update: if isValidId(majorId) && isValidAcademicItem(incoming());
+      allow delete: if isValidId(majorId);
+    }
+
+    match /generations/{generationId} {
+      allow read: if true;
+      allow create, update: if isValidId(generationId) && isValidAcademicItem(incoming());
+      allow delete: if isValidId(generationId);
+    }
+
+    match /academicYears/{academicYearId} {
+      allow read: if true;
+      allow create, update: if isValidId(academicYearId) && isValidAcademicItem(incoming());
+      allow delete: if isValidId(academicYearId);
+    }
+
+    match /yearLevels/{yearLevelId} {
+      allow read: if true;
+      allow create, update: if isValidId(yearLevelId) && isValidAcademicItem(incoming());
+      allow delete: if isValidId(yearLevelId);
+    }
+
+    match /semesters/{semesterId} {
+      allow read: if true;
+      allow create, update: if isValidId(semesterId) && isValidAcademicItem(incoming());
+      allow delete: if isValidId(semesterId);
+    }
+
+    // Attendance Records Collection
+    match /attendances/{attendanceId} {
+      allow read: if true;
+      allow create, update: if isValidId(attendanceId) && isValidAttendance(incoming());
+      allow delete: if isValidId(attendanceId);
+    }
+  }
+}

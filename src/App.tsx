@@ -47,7 +47,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { GoogleDriveSyncModal } from './components/GoogleDriveSyncModal';
 import { AcademicStructureView } from './components/AcademicStructureView';
 import { motion, AnimatePresence } from 'motion/react';
-import { academicDatabase, createSystemBackup, studentDatabase } from './service/database';
+import { academicDatabase, attendanceDatabase, classesDatabase, createSystemBackup, studentDatabase, teachersDatabase } from './service/database';
 import { initAuth } from './service/googleAuth';
 import { generateId } from './utils/idGenerator';
 import type { SchoolDatabasePayload } from './service/googleDriveDatabase';
@@ -197,17 +197,40 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadStudents = async () => {
+    const loadAllData = async () => {
       try {
-        const databaseStudents = await studentDatabase.list();
-        const storedStudents = databaseStudents.length > 0
-          ? databaseStudents
-          : await studentDatabase.import(students, 'replace');
+        const [databaseStudents, databaseTeachers, databaseClasses, academicData, databaseAttendances] = await Promise.allSettled([
+          studentDatabase.list(),
+          teachersDatabase.list(),
+          classesDatabase.list(),
+          academicDatabase.list(),
+          attendanceDatabase.getAll()
+        ]);
 
-        if (!cancelled) {
-          setStudents(storedStudents);
-          setDatabaseError('');
+        if (cancelled) return;
+
+        if (databaseStudents.status === 'fulfilled' && databaseStudents.value.length > 0) {
+          setStudents(databaseStudents.value);
         }
+        if (databaseTeachers.status === 'fulfilled' && databaseTeachers.value.length > 0) {
+          setTeachers(databaseTeachers.value);
+        }
+        if (databaseClasses.status === 'fulfilled' && databaseClasses.value.length > 0) {
+          setClasses(databaseClasses.value);
+        }
+        if (academicData.status === 'fulfilled') {
+          setGenerations(academicData.value.generations);
+          setAcademicYears(academicData.value.academicYears);
+          setYearLevels(academicData.value.yearLevels);
+          setSemesters(academicData.value.semesters);
+          if (academicData.value.majors && academicData.value.majors.length > 0) {
+            setMajors(academicData.value.majors);
+          }
+        }
+        if (databaseAttendances.status === 'fulfilled' && Object.keys(databaseAttendances.value).length > 0) {
+          setSavedAttendances(databaseAttendances.value);
+        }
+        setDatabaseError('');
       } catch (error) {
         if (!cancelled) {
           setDatabaseError(error instanceof Error ? error.message : 'មិនអាចទាញទិន្នន័យពី Database បានទេ។');
@@ -215,27 +238,10 @@ export default function App() {
       }
     };
 
-    loadStudents();
+    loadAllData();
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    academicDatabase.list()
-      .then((data) => {
-        if (cancelled) return;
-        setGenerations(data.generations);
-        setAcademicYears(data.academicYears);
-        setYearLevels(data.yearLevels);
-        setSemesters(data.semesters);
-        setDatabaseError('');
-      })
-      .catch((error) => {
-        if (!cancelled) setDatabaseError(error instanceof Error ? error.message : 'មិនអាចទាញទិន្នន័យវគ្គ និងជំនាន់បានទេ។');
-      });
-    return () => { cancelled = true; };
   }, []);
 
   // Dark mode class sync
@@ -345,18 +351,21 @@ export default function App() {
   };
 
   // Teacher Handlers
-  const handleAddTeacher = (newTeacher: Teacher) => {
+  const handleAddTeacher = async (newTeacher: Teacher) => {
     setTeachers((prev) => [newTeacher, ...prev]);
+    await teachersDatabase.save(newTeacher);
   };
 
-  const handleUpdateTeacher = (updatedTeacher: Teacher) => {
+  const handleUpdateTeacher = async (updatedTeacher: Teacher) => {
     setTeachers((prev) =>
       prev.map((t) => (t.id === updatedTeacher.id ? updatedTeacher : t))
     );
+    await teachersDatabase.save(updatedTeacher);
   };
 
-  const handleDeleteTeacher = (teacherId: string) => {
+  const handleDeleteTeacher = async (teacherId: string) => {
     setTeachers((prev) => prev.filter((t) => t.id !== teacherId));
+    await teachersDatabase.remove(teacherId);
   };
 
   const handleImportTeachers = async (
@@ -365,13 +374,16 @@ export default function App() {
   ) => {
     const formattedWithIds: Teacher[] = importedTeachers.map((t, idx) => ({
       ...t,
-      id: `teacher-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 6)}`
+      id: generateId('teacher')
     }));
 
     if (mode === 'replace') {
       setTeachers(formattedWithIds);
     } else {
       setTeachers((prev) => [...formattedWithIds, ...prev]);
+    }
+    for (const t of formattedWithIds) {
+      teachersDatabase.save(t);
     }
   };
 
@@ -401,8 +413,14 @@ export default function App() {
       await studentDatabase.import(payload.students, 'replace');
       setStudents(payload.students);
     }
-    if (payload.teachers) setTeachers(payload.teachers);
-    if (payload.classes) setClasses(payload.classes);
+    if (payload.teachers) {
+      setTeachers(payload.teachers);
+      for (const t of payload.teachers) teachersDatabase.save(t);
+    }
+    if (payload.classes) {
+      setClasses(payload.classes);
+      for (const c of payload.classes) classesDatabase.save(c);
+    }
     if (payload.majors) setMajors(payload.majors);
     if (payload.academicStructure) {
       if (payload.academicStructure.generations) setGenerations(payload.academicStructure.generations);
@@ -410,10 +428,12 @@ export default function App() {
       if (payload.academicStructure.yearLevels) setYearLevels(payload.academicStructure.yearLevels);
       if (payload.academicStructure.semesters) setSemesters(payload.academicStructure.semesters);
     }
-    if (payload.savedAttendances) setSavedAttendances(payload.savedAttendances);
+    if (payload.savedAttendances) {
+      setSavedAttendances(payload.savedAttendances);
+    }
   };
 
-  const handleSaveAttendance = (
+  const handleSaveAttendance = async (
     classId: string,
     date: string,
     records: Record<string, { status: AttendanceStatus; note?: string }>
@@ -423,6 +443,7 @@ export default function App() {
       ...prev,
       [key]: records
     }));
+    await attendanceDatabase.saveRecord(classId, date, records);
   };
 
   const handleAddGeneration = async (data: Omit<Generation, 'id'>) => {
@@ -485,18 +506,20 @@ export default function App() {
     setSemesters((current) => current.filter((entry) => entry.id !== id));
   };
 
-  const handleAddClass = (newClassData: Omit<ClassRoom, 'id'>) => {
+  const handleAddClass = async (newClassData: Omit<ClassRoom, 'id'>) => {
     const newClass: ClassRoom = {
       ...newClassData,
-      id: `c-${Date.now()}`
+      id: generateId('c')
     };
     setClasses((prev) => [...prev, newClass]);
+    await classesDatabase.save(newClass);
   };
 
-  const handleUpdateClass = (updatedClass: ClassRoom) => {
+  const handleUpdateClass = async (updatedClass: ClassRoom) => {
     setClasses((prev) =>
       prev.map((c) => (c.id === updatedClass.id ? updatedClass : c))
     );
+    await classesDatabase.save(updatedClass);
     // If class name changed, also update students who have that class
     setStudents((prev) =>
       prev.map((s) => {
@@ -508,23 +531,26 @@ export default function App() {
     );
   };
 
-  const handleDeleteClass = (classId: string) => {
+  const handleDeleteClass = async (classId: string) => {
     setClasses((prev) => prev.filter((c) => c.id !== classId));
+    await classesDatabase.remove(classId);
   };
 
-  const handleAddMajor = (newMajorData: Omit<Major, 'id'>) => {
+  const handleAddMajor = async (newMajorData: Omit<Major, 'id'>) => {
     const newMajor: Major = {
       ...newMajorData,
-      id: `m-${Date.now()}`
+      id: generateId('m')
     };
     setMajors((prev) => [...prev, newMajor]);
+    await academicDatabase.create('majors', newMajor);
   };
 
-  const handleUpdateMajor = (updatedMajor: Major) => {
+  const handleUpdateMajor = async (updatedMajor: Major) => {
     const oldMajor = majors.find((m) => m.id === updatedMajor.id);
     setMajors((prev) =>
       prev.map((m) => (m.id === updatedMajor.id ? updatedMajor : m))
     );
+    await academicDatabase.update('majors', updatedMajor);
     // If major name changed, also update students with old major name
     if (oldMajor && oldMajor.nameKhmer !== updatedMajor.nameKhmer) {
       setStudents((prev) =>
@@ -538,8 +564,9 @@ export default function App() {
     }
   };
 
-  const handleDeleteMajor = (majorId: string) => {
+  const handleDeleteMajor = async (majorId: string) => {
     setMajors((prev) => prev.filter((m) => m.id !== majorId));
+    await academicDatabase.remove('majors', majorId);
   };
 
   const handleAddStudent = async (newStudentData: Omit<Student, 'id'>) => {
