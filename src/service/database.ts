@@ -21,6 +21,7 @@ import {
   INITIAL_SEMESTERS
 } from '../data/mockData';
 import { firestoreDatabase, testFirestoreConnection } from './firebase';
+import { Unsubscribe } from 'firebase/firestore';
 
 // LocalStorage Keys
 const KEYS = {
@@ -34,7 +35,8 @@ const KEYS = {
   SEMESTERS: 'smart_school_semesters',
   ATTENDANCE: 'smart_school_attendance',
   TEACHER_ATTENDANCE: 'smart_school_teacher_attendance',
-  BACKUPS: 'smart_school_backups'
+  BACKUPS: 'smart_school_backups',
+  SEEDED: 'smart_school_firestore_seeded'
 };
 
 // Safe LocalStorage Helpers
@@ -56,10 +58,47 @@ function setStoredJson<T>(key: string, value: T): void {
   }
 }
 
+// =============================================================
+// Auto-Seed Initial Dynamic Data to Cloud Database if Empty
+// =============================================================
+export async function seedInitialCloudDataIfEmpty(): Promise<boolean> {
+  try {
+    const existing = await firestoreDatabase.getAll<Student>('students');
+    if (!existing || existing.length === 0) {
+      console.log('Seeding initial dynamic records into Firestore database...');
+      await Promise.allSettled([
+        firestoreDatabase.batchSet('students', INITIAL_STUDENTS),
+        firestoreDatabase.batchSet('teachers', INITIAL_TEACHERS),
+        firestoreDatabase.batchSet('classes', INITIAL_CLASSES),
+        firestoreDatabase.batchSet('majors', INITIAL_MAJORS),
+        firestoreDatabase.batchSet('generations', INITIAL_GENERATIONS),
+        firestoreDatabase.batchSet('academicYears', INITIAL_ACADEMIC_YEARS),
+        firestoreDatabase.batchSet('yearLevels', INITIAL_YEAR_LEVELS),
+        firestoreDatabase.batchSet('semesters', INITIAL_SEMESTERS)
+      ]);
+      localStorage.setItem(KEYS.SEEDED, 'true');
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.warn('Initial cloud database seed check:', e);
+    return false;
+  }
+}
+
 // -------------------------------------------------------------
 // 1. STUDENT DATABASE SERVICE (Firestore + Local Sync)
 // -------------------------------------------------------------
 export const studentDatabase = {
+  subscribe: (onUpdate: (students: Student[]) => void): Unsubscribe => {
+    return firestoreDatabase.subscribeCollection<Student>('students', (cloudStudents) => {
+      if (cloudStudents && cloudStudents.length > 0) {
+        setStoredJson(KEYS.STUDENTS, cloudStudents);
+        onUpdate(cloudStudents);
+      }
+    });
+  },
+
   list: async (): Promise<Student[]> => {
     try {
       const cloudStudents = await firestoreDatabase.getAll<Student>('students');
@@ -83,7 +122,7 @@ export const studentDatabase = {
     const updated = [student, ...current.filter((s) => s.id !== student.id)];
     setStoredJson(KEYS.STUDENTS, updated);
 
-    // Sync to Firestore in background
+    // Sync to Firestore
     firestoreDatabase.setItem('students', student).catch((e) => {
       console.warn('Firestore create student background sync failed:', e);
     });
@@ -96,7 +135,7 @@ export const studentDatabase = {
     const updated = current.map((s) => (s.id === student.id ? student : s));
     setStoredJson(KEYS.STUDENTS, updated);
 
-    // Sync to Firestore in background
+    // Sync to Firestore
     firestoreDatabase.setItem('students', student).catch((e) => {
       console.warn('Firestore update student background sync failed:', e);
     });
@@ -110,7 +149,7 @@ export const studentDatabase = {
     const updated = current.filter((s) => !idSet.has(s.id));
     setStoredJson(KEYS.STUDENTS, updated);
 
-    // Sync deletion to Firestore in background
+    // Sync deletion to Firestore
     firestoreDatabase.batchDelete('students', ids).catch((e) => {
       console.warn('Firestore delete student background sync failed:', e);
     });
@@ -144,6 +183,15 @@ export const studentDatabase = {
 // 2. TEACHERS DATABASE SERVICE (Firestore + Local Sync)
 // -------------------------------------------------------------
 export const teachersDatabase = {
+  subscribe: (onUpdate: (teachers: Teacher[]) => void): Unsubscribe => {
+    return firestoreDatabase.subscribeCollection<Teacher>('teachers', (cloudTeachers) => {
+      if (cloudTeachers && cloudTeachers.length > 0) {
+        setStoredJson(KEYS.TEACHERS, cloudTeachers);
+        onUpdate(cloudTeachers);
+      }
+    });
+  },
+
   list: async (): Promise<Teacher[]> => {
     try {
       const cloudTeachers = await firestoreDatabase.getAll<Teacher>('teachers');
@@ -184,6 +232,15 @@ export const teachersDatabase = {
 // 3. CLASSES DATABASE SERVICE (Firestore + Local Sync)
 // -------------------------------------------------------------
 export const classesDatabase = {
+  subscribe: (onUpdate: (classes: ClassRoom[]) => void): Unsubscribe => {
+    return firestoreDatabase.subscribeCollection<ClassRoom>('classes', (cloudClasses) => {
+      if (cloudClasses && cloudClasses.length > 0) {
+        setStoredJson(KEYS.CLASSES, cloudClasses);
+        onUpdate(cloudClasses);
+      }
+    });
+  },
+
   list: async (): Promise<ClassRoom[]> => {
     try {
       const cloudClasses = await firestoreDatabase.getAll<ClassRoom>('classes');

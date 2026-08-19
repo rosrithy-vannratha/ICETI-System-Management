@@ -19,7 +19,8 @@ import {
   Camera,
   Upload,
   Cloud,
-  HardDrive
+  HardDrive,
+  Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NavTab } from './Sidebar';
@@ -135,6 +136,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2.5">
+        {/* Real-time Cloud Database Status Pill */}
+        <div
+          className="px-2.5 sm:px-3 py-1.5 rounded-2xl flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs"
+          title="ប្រព័ន្ធកំពុងដំណើរការលើ Live Firestore Cloud Database ផ្ទាល់"
+        >
+          <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          <span className="hidden md:inline font-bold">Cloud Live</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+        </div>
+
         {/* Google Drive Sync Indicator / Button */}
         {onOpenDriveSync && (
           <button

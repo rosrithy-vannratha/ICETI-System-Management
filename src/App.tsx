@@ -47,7 +47,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { GoogleDriveSyncModal } from './components/GoogleDriveSyncModal';
 import { AcademicStructureView } from './components/AcademicStructureView';
 import { motion, AnimatePresence } from 'motion/react';
-import { academicDatabase, attendanceDatabase, classesDatabase, createSystemBackup, studentDatabase, teachersDatabase } from './service/database';
+import { academicDatabase, attendanceDatabase, classesDatabase, createSystemBackup, seedInitialCloudDataIfEmpty, studentDatabase, teachersDatabase } from './service/database';
 import { initAuth } from './service/googleAuth';
 import { generateId } from './utils/idGenerator';
 import type { SchoolDatabasePayload } from './service/googleDriveDatabase';
@@ -196,9 +196,15 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+    let unsubStudents: (() => void) | undefined;
+    let unsubTeachers: (() => void) | undefined;
+    let unsubClasses: (() => void) | undefined;
 
-    const loadAllData = async () => {
+    const initializeDataAndSubscriptions = async () => {
       try {
+        // Seed initial data to Firestore if cloud is completely empty
+        await seedInitialCloudDataIfEmpty();
+
         const [databaseStudents, databaseTeachers, databaseClasses, academicData, databaseAttendances] = await Promise.allSettled([
           studentDatabase.list(),
           teachersDatabase.list(),
@@ -231,6 +237,25 @@ export default function App() {
           setSavedAttendances(databaseAttendances.value);
         }
         setDatabaseError('');
+
+        // Subscribe to real-time updates from Firestore
+        unsubStudents = studentDatabase.subscribe((updatedStudents) => {
+          if (!cancelled && updatedStudents.length > 0) {
+            setStudents(updatedStudents);
+          }
+        });
+
+        unsubTeachers = teachersDatabase.subscribe((updatedTeachers) => {
+          if (!cancelled && updatedTeachers.length > 0) {
+            setTeachers(updatedTeachers);
+          }
+        });
+
+        unsubClasses = classesDatabase.subscribe((updatedClasses) => {
+          if (!cancelled && updatedClasses.length > 0) {
+            setClasses(updatedClasses);
+          }
+        });
       } catch (error) {
         if (!cancelled) {
           setDatabaseError(error instanceof Error ? error.message : 'មិនអាចទាញទិន្នន័យពី Database បានទេ។');
@@ -238,9 +263,12 @@ export default function App() {
       }
     };
 
-    loadAllData();
+    initializeDataAndSubscriptions();
     return () => {
       cancelled = true;
+      if (unsubStudents) unsubStudents();
+      if (unsubTeachers) unsubTeachers();
+      if (unsubClasses) unsubClasses();
     };
   }, []);
 
